@@ -1,0 +1,513 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- ===================================================== -->
+        <!-- ACTION RAPPORT (ODOO 18 COMPLIANT)    --> 
+         
+        <!-- ===================================================== -->
+        <record id="paperformat_ipres_portrait" model="report.paperformat">
+    <field name="name">IPRES A4 Portrait</field>
+    <field name="default" eval="False"/>
+    <field name="format">A4</field>
+    <field name="orientation">Portrait</field>
+
+    <field name="margin_top">10</field>
+    <field name="margin_bottom">10</field>
+    <field name="margin_left">10</field>
+    <field name="margin_right">10</field>
+
+    <field name="header_line" eval="False"/>
+    <field name="header_spacing">5</field>
+    <field name="dpi">90</field>
+</record>
+
+        <record id="action_report_payroll_cesag" model="ir.actions.report">
+            <field name="name">Bulletin GAINDE 2000</field>
+            <field name="model">hr.payslip</field>
+            <field name="report_type">qweb-pdf</field>
+            <field name="report_name">arsata_payroll.report_payroll_cesag</field>
+            <field name="report_file">arsata_payroll.report_payroll_cesag</field>
+             <field name="print_report_name">'Bulletin de Paie - %s' % (object.employee_id.name)</field>
+             <field name="paperformat_id" ref="arsata_payroll.paperformat_ipres_portrait"/>
+            <field name="binding_model_id" ref="hr_payroll.model_hr_payslip"/>
+            <field name="binding_type">report</field>
+        </record>
+        
+        
+        <record id="hr_payslip_inherit_bultin" model="ir.ui.view">
+  <field name="name">hr.payslip.bultint</field>
+  <field name="model">hr.payslip</field>
+  <field name="inherit_id" ref="hr_payroll.view_hr_payslip_form"/>
+  <field name="arch" type="xml">
+    <header position="inside">
+      <button name="%(action_report_payroll_cesag)d"
+              type="action"
+              string="Bulletin Gaindé"
+              class="btn-primary"/>
+    </header>
+  </field>
+</record>
+
+   <record id="action_server_print_bulletin_gainde" model="ir.actions.server">
+    <field name="name">Imprimer Bulletin Gaindé</field>
+    <field name="model_id" ref="hr_payroll.model_hr_payslip"/>
+    <field name="binding_model_id" ref="hr_payroll.model_hr_payslip"/>
+    <field name="binding_type">action</field>
+    <field name="state">code</field>
+    <field name="code">
+        action = env.ref('arsata_payroll.action_report_payroll_cesag').report_action(records)
+    </field>
+</record>
+        
+        
+          
+
+        <!-- ===================================================== -->
+        <!-- FORMAT DE PAPIER -->
+        <!-- ===================================================== -->
+      
+        <!-- ===================================================== -->
+        <!-- TEMPLATE QWEB PRINCIPAL -->
+    
+
+
+<template id="report_payroll_cesag">
+
+<t t-call="web.html_container">
+<t t-foreach="docs" t-as="o">
+<t t-call="web.basic_layout">
+
+<t t-set="mois_fr" t-value="{
+  '01': 'janvier',
+  '02': 'février',
+  '03': 'mars',
+  '04': 'avril',
+  '05': 'mai',
+  '06': 'juin',
+  '07': 'juillet',
+  '08': 'août',
+  '09': 'septembre',
+  '10': 'octobre',
+  '11': 'novembre',
+  '12': 'décembre'
+}"/>
+
+<style>
+
+/* ================= BASE ================= */
+.page {
+  font-family: Helvetica, Arial;
+  font-size: 11px;
+  color: #000;
+  background: #fff;
+  margin: 0;
+}
+
+/* ================= TABLEAUX ARRONDIS ================= */
+table {
+  width: 100%;
+  margin-bottom: 6px;
+
+  
+  border-collapse: separate;
+  border-spacing: 0;
+
+  border: 1px solid #444;
+  border-radius: 8px;        /* ← ARRONDI GLOBAL */
+  overflow: hidden;          /* wkhtmltopdf */
+  background: #fff;
+}
+
+/* Cellules */
+td, th {
+  padding: 4px 5px;
+  border-right: 1px solid #444;
+  border-bottom: 1px solid #444;
+}
+
+/* Nettoyage des doubles bordures */
+td:last-child,
+th:last-child {
+  border-right: none;
+}
+
+tr:last-child td {
+  border-bottom: none;
+}
+
+/* ================= TABLES SANS BORDURE ================= */
+.no-border {
+  border: none !important;
+  border-radius: 0 !important;
+}
+
+.no-border td {
+  border: none !important;
+  padding: 2px;
+}
+
+/* ================= STYLES EXISTANTS ================= */
+.primary {
+  color: #0b3c5d;
+  font-weight: bold;
+}
+
+.bg {
+  background: #e9edf2;
+  font-weight: bold;
+  color: #0b3c5d;
+}
+
+.center { text-align: center; }
+.right  { text-align: right; }
+
+.title {
+  font-size: 20px;
+  text-align: center;
+  font-weight: bold;
+  color: #0b3c5d;
+  border-bottom: 2px solid #0b3c5d;
+  margin: 4px 0 6px;
+}
+
+/* ================= BLOCS ================= */
+.employee-box {
+  border: 2px solid #0b3c5d;
+  border-radius: 10px;   /* plus arrondi */
+  background: #f8fafc;
+  padding: 5px;
+  margin-bottom: 6px;
+}
+
+.employee-name {
+  font-size: 14px;
+  font-weight: bold;
+  color: #0b3c5d;
+}
+
+.net-row td {
+  font-size: 15px;
+  font-weight: bold;
+  background: #eef3f7;
+  border-top: 2px solid #0b3c5d;
+  border-bottom: 2px solid #0b3c5d;
+}
+
+.signature {
+  height: 45px;
+  border: 1px dashed #777;
+  border-radius: 8px;
+  text-align: center;
+  vertical-align: bottom;
+  font-weight: bold;
+}
+
+.footer {
+  font-size: 9px;
+  text-align: center;
+  margin-top: 4px;
+}
+
+</style>
+
+
+<div class="page">
+
+<!-- ENTREPRISE -->
+<table class="no-border">
+<tr>
+<td>
+<img t-if="o.company_id.logo"
+ t-att-src="'data:image/png;base64,' + o.company_id.logo.decode('utf-8')"
+ style="height:60px;"/><br/>
+<span class="primary"><t t-esc="o.company_id.name"/></span><br/>
+<t t-esc="o.company_id.street"/><br/>
+<t t-esc="o.company_id.zip"/><br/>
+<t t-esc="o.company_id.phone"/>
+
+</td>
+
+</tr>
+</table>
+
+<div class="title">BULLETIN DE PAIE DU
+<td class="right primary">
+     <t t-esc="mois_fr[o.date_to.strftime('%m')]"/>
+<t t-esc="o.date_to.strftime(' %Y')"/>
+
+</td>
+</div>
+
+<!-- EMPLOYÉ -->
+<div class="employee-box">
+<table class="no-border">
+<tr>
+<td class="employee-name"><t t-esc="o.employee_id.name"/></td>
+<td class="right primary">Matricule : <t t-esc="o.employee_id.registration_number or '-'"/></td>
+</tr>
+</table>
+</div>
+
+<!-- IDENTITÉ -->
+<table>
+<tr class="bg center">
+<td>Date naissance</td><td>Date embauche</td><td>Fonction</td><td>Catégorie</td><td>Convention Collective</td>
+</tr>
+<tr class="center">
+<td><t t-esc="o.employee_id.birthday or '-'"/></td>
+<td><t t-esc="o.contract_id.date_start or '-'"/></td>
+<td><t t-esc="o.contract_id.job_id.name"/></td>
+<td><t t-esc="o.contract_id.categ_id.name"/></td>
+<td><t t-esc="o.contract_id.categ_id.conv_id.name or ' __'"/></td>
+</tr>
+<tr class="bg center">
+<td>Situation Matrimoniale</td><td>Nb parts</td><td>N° SS</td><td>N° IPRES</td><td>N° Carte d'indentité</td>
+</tr>
+<tr class="center">
+<td><t t-esc="o.employee_id.marital"/></td>
+<td><t t-esc="o.employee_id.nb_part"/></td>
+<td><t t-esc="o.employee_id.ssnid or '-'"/></td>
+<td><t t-esc="o.employee_id.ipres_number or '-'"/></td>
+<td><t t-esc="o.employee_id.identification_id or '-'"/></td>
+</tr>
+</table>
+
+<!-- ===== BRUT ===== -->
+<!-- ===== TABLE UNIQUE DES RÈGLES ===== -->
+<table>
+                <tr class="bg center">
+                  <td>Rubriques de paie</td>
+                  <td>Base</td>
+                  <td>Taux</td>
+                  <td>Charges Pat.</td>
+                  <td>Gains</td>
+                  <td>Retenues</td>
+                </tr>
+
+                <!-- ===== SALAIRE DE BASE + SURSALAIRE (TOUJOURS EN HAUT) ===== -->
+                <tr t-foreach="o.line_ids.filtered(lambda l: l.code in ['BASIC1','BASIC2'] and l.total != 0)" t-as="l">
+                  <td><t t-esc="l.code"/> - <t t-esc="l.name"/></td>
+                  <td class="right"><t t-esc="l.amount"/></td>
+                  <td class="center"><t t-esc="l.rate or ''"/></td>
+                  <td></td>
+                  <td class="right"><t t-esc="l.total"/></td>
+                  <td></td>
+                </tr>
+
+                <!-- ===== AUTRES GAINS (PRIMES / INDEMNITES) ===== -->
+                <tr t-foreach="o.line_ids.filtered(lambda l: l.category_id.code =='BASIC' and l.code not in ['BASIC1','BASIC2'] and l.total != 0)" t-as="l">
+                  <td><t t-esc="l.code"/> - <t t-esc="l.name"/></td>
+                  <td class="right"><t t-esc="l.amount"/></td>
+                  <td class="center"><t t-esc="l.rate or ''"/></td>
+                  <td></td>
+                  <td class="right"><t t-esc="l.total"/></td>
+                  <td></td>
+                </tr>
+
+                <!-- ===== SALAIRE BRUT IMPOSABLE ===== -->
+                <tr class="bg">
+                  <td>300 - SALAIRE BRUT IMPOSABLE -</td>
+                  <td colspan="3"></td>
+                  <td class="right">
+                    <t t-esc="sum(o.line_ids.filtered(lambda l: l.code == 'GROSS').mapped('total'))"/>
+                  </td>
+                  <td></td>
+                </tr>
+
+                <!-- ===== CHARGES SALARIALES ===== -->
+                 <tr t-foreach="o.line_ids.filtered(lambda l: l.code in ['CSAL6','CSAL2','CSAL1','CSAL7'] and l.total != 0)" t-as="l">
+                  <td><t t-esc="l.code"/> - <t t-esc="l.name"/></td>
+                  <td class="right"><t t-esc="l.amount"/></td>
+                  <td class="center"><t t-esc="l.rate or ''"/></td>
+                  <td></td>
+                  <td></td>
+                  <td class="right"><t t-esc="l.total"/></td>
+                </tr>
+                
+                <tr t-foreach="o.line_ids.filtered(lambda l: l.code in ['CPAT1','CPAT2','CPAT3','CPAT5','CPAT4'] and l.total != 0)" t-as="l">
+                  <td><t t-esc="l.code"/> - <t t-esc="l.name"/></td>
+                  <td class="right"><t t-esc="l.amount"/></td>
+                  <td class="center"><t t-esc="l.rate or ''"/></td>
+                  <td class="right"><t t-esc="l.total"/></td>
+                  <td></td>
+                  <td></td>
+                </tr>
+                 <tr t-foreach="o.line_ids.filtered(lambda l: l.category_id.code == CPAT and l.code not in  ['CPAT1','CPAT2','CPAT3','CPAT5','CPAT4'] and l.total != 0)" t-as="l">
+                  <td><t t-esc="l.code"/> - <t t-esc="l.name"/></td>
+                  <td class="right"><t t-esc="l.amount"/></td>
+                  <td class="center"><t t-esc="l.rate or ''"/></td>
+                  <td class="right"><t t-esc="l.total"/></td>
+                  <td></td>
+                  <td></td>
+                </tr>
+                 <tr class="bg">
+                  <td>504 - SALAIRE NET APRES IMPOT -</td>
+                  <td colspan="3"></td>
+                  <td class="right">
+                    <t t-esc="
+                      sum(o.line_ids.filtered(
+                        lambda l: l.total &gt; 0 and l.category_id.code == BASIC
+                      ).mapped('total'))
+                      -
+                      abs(sum(o.line_ids.filtered(
+                        lambda l: l.category_id.code == 'CSAL'
+                      ).mapped('total')))
+                    "/>
+                  </td>
+                  <td></td>
+                </tr>
+                
+                 <tr t-foreach="o.line_ids.filtered(lambda l: l.category_id.code == 'ALW' and l.total != 0)" t-as="l">
+                  <td><t t-esc="l.code"/> - <t t-esc="l.name"/></td>
+                  <td class="right"><t t-esc="l.amount"/></td>
+                  <td class="center"></td>
+                  <td></td>
+                  <td class="right"><t t-esc="l.total"/></td>
+                  <td></td>
+                </tr>
+                
+                <tr t-foreach="o.line_ids.filtered(lambda l: l.category_id.code == 'CSAL' and l.code not in ['CSAL6','CSAL2','CSAL1','CSAL7'] and l.total != 0)" t-as="l">
+                  <td><t t-esc="l.code"/> - <t t-esc="l.name"/></td>
+                  <td class="right"><t t-esc="l.amount"/></td>
+                  <td class="center"><t t-esc="l.rate or ''"/></td>
+                  <td></td>
+                  <td></td>
+                  <td class="right"><t t-esc="abs(l.total)"/></td>
+                </tr>
+
+                <!-- ===== TOTAL CHARGES SALARIALES ===== -->
+                
+                
+
+                <!-- ===== ALLOCATIONS (PRIME TRANSPORT EN GAINS) ===== -->
+               
+
+                <!-- ===== TOTAUX DES COLONNES ===== -->
+                <tr class="bg">
+                  <td>TOTAUX</td>
+                  <td colspan="2"></td>
+
+                  <!-- Charges Patronales -->
+                  <td class="right">
+                    <t t-esc="sum(o.line_ids.filtered(lambda l: l.category_id.code == 'CPAT').mapped('total'))"/>
+                  </td>
+
+                  <!-- Gains -->
+                  <td class="right">
+                    <t t-esc="sum(o.line_ids.filtered(
+                      lambda l: l.total &gt; 0 and l.category_id.code in ['BASIC','ALW']
+                    ).mapped('total'))"/>
+                  </td>
+
+                  <!-- Retenues -->
+                  <td class="right">
+                    <t t-esc="abs(sum(o.line_ids.filtered(
+                      lambda l: l.total &lt; 0 or l.category_id.code == 'CSAL'
+                    ).mapped('total')))"/>
+                  </td>
+                </tr>
+
+                <!-- ===== SALAIRE NET APRES IMPOT ===== -->
+               
+
+              </table>
+
+<!-- NET -->
+<table>
+<tr class="net-row">
+<td class="right">NET A PAYER</td>
+<td class="right">
+<t t-esc="sum(o.line_ids.filtered(lambda l: l.code=='NET').mapped('total'))"/> FCFA
+</td>
+</tr>
+</table>
+ <table>
+  <tr class="bg center">
+    <td>Libellé</td>
+    <td>Mensuel</td>
+    <td>Annuel</td>
+  </tr>
+  
+  <tr>
+    <td>Brut imposable</td>
+    <td class="right">
+      <t t-esc="sum(o.line_ids.filtered(lambda l: l.code=='GROSS').mapped('total'))"/>
+    </td>
+    <td class="right">
+      <t t-esc="sum(o.line_ids.filtered(lambda l: l.code=='CGROSS').mapped('total')) * 12"/>
+    </td>
+  </tr>
+  
+  <tr>
+    <td>Impôt sur le revenu</td>
+    <td class="right">
+      <t t-esc="sum(o.line_ids.filtered(lambda l: l.code=='CSAL1').mapped('total'))"/>
+    </td>
+    <td class="right">
+      <t t-esc="sum(o.line_ids.filtered(lambda l: l.code=='CSAL1').mapped('total')) * 12"/>
+    </td>
+  </tr>
+  
+  <tr>
+    <td>Trimf</td>
+    <td class="right">
+      <t t-esc="sum(o.line_ids.filtered(lambda l: l.code=='CSAL2').mapped('total'))"/>
+    </td>
+    <td class="right">
+      <t t-esc="sum(o.line_ids.filtered(lambda l: l.code=='CSAL2').mapped('total')) * 12"/>
+    </td>
+  </tr>
+  
+  
+  
+  <!-- IPRES RC SALARIÉ -->
+  <tr>
+  <td>Ipres RG</td>
+  <td class="right">
+  <t t-esc="sum(o.line_ids.filtered(lambda l: l.code=='CPAT1').mapped('total'))"/>
+  </td>
+  <td class="right">
+  <t t-esc="sum(o.line_ids.filtered(lambda l: l.code=='CPAT1').mapped('total')) * 12"/>
+  </td>
+  </tr>
+ 
+  <tr>
+  <td>Ipres RC</td>
+  <td class="right">
+  <t t-esc="sum(o.line_ids.filtered(lambda l: l.code=='CPAT2').mapped('total'))"/>
+  </td>
+  <td class="right">
+  <t t-esc="sum(o.line_ids.filtered(lambda l: l.code=='CPAT2').mapped('total')) * 12"/>
+  </td>
+  </tr>
+  
+  
+  </table>
+
+<table class="no-border">
+<tr>
+<td class="signature">Signature Employeur</td>
+<td class="signature">Signature Employé</td>
+</tr>
+</table>
+
+<div class="footer">
+NB : Ce bulletin doit être conservé sans limitation de durée
+</div>
+
+</div>
+
+</t>
+</t>
+</t>
+
+</template>
+
+
+
+
+
+
+    </data>
+</odoo>

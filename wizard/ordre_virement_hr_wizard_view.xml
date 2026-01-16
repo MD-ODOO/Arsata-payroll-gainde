@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Vue Formulaire du Wizard -->
+        <record id="ordre_virement_hr_wizard_form" model="ir.ui.view">
+            <field name="name">wizard.ordre.virement.hr.form</field>
+            <field name="model">wizard.ordre.virement.hr</field>
+            <field name="arch" type="xml">
+                <form string="Ordre de virement">
+                    <group string="Période">
+                        <field name="date_start"/>
+                        <field name="date_stop"/>
+                    </group>
+
+                    <group>
+                        <field name="bank_id" required="True"/>
+                    </group>
+
+                    <group>
+                        <field name="payslip_ids" 
+                              domain="[('date_from','&gt;=',date_start),('date_to','&lt;=',date_stop)]" 
+                                                            nolabel="1" >
+                            <list>
+                                <field name="number"/>
+                                <field name="employee_id"/>
+                                <field name="bank_id"/>
+                                <field name="date_from"/>
+                                <field name="date_to"/>
+                                <field name="state"/>             
+                            </list>    
+                        </field>
+                    </group>
+
+                    <footer>
+                        <button type="object" name="action_print_report" string="Imprimer" class="btn btn-primary"/>
+                        <button string="Annuler" class="btn btn-secondary" special="cancel"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+        <!-- Action pour ouvrir le Wizard -->
+        <record id="action_ordre_virement_hr_wizard" model="ir.actions.act_window">
+            <field name="name">Ordre de virement employés</field>
+            <field name="res_model">wizard.ordre.virement.hr</field>
+            <field name="view_mode">form</field>
+            <field name="view_id" ref="ordre_virement_hr_wizard_form"/>
+            <field name="target">new</field>
+        </record>
+
+        <!-- Menu pour accéder au Wizard -->
+         <menuitem
+            id="menu_ordre_virement_hr_root"
+            name="Ordre de virement"
+            parent="hr_payroll.menu_hr_payroll_payslips"
+            sequence="6"/>
+        <menuitem
+            id="menu_ordre_virement_hr"
+            name="Ordre de virement payement employés"
+            parent="menu_ordre_virement_hr_root"
+            action="action_ordre_virement_hr_wizard"
+            sequence="6"/>
+    </data>
+</odoo>

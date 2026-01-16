@@ -1,0 +1,85 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+# ------------------- MANAGERS -------------------
+optesis_asset_manager,Asset Manager,model_optesis_asset_asset,group_manager,1,1,1,1
+optesis_control_manager,Control Manager,model_optesis_control,group_manager,1,1,1,1
+optesis_asset_transfert_manager,Asset Transfert Manager,model_optesis_asset_transfert,group_manager,1,1,1,1
+optesis_family_manager,Family Manager,model_optesis_family,group_manager,1,1,1,1
+optesis_product_manager,Product Manager,model_optesis_product,group_manager,1,1,1,1
+optesis_condition_manager,Condition Manager,model_optesis_condition,group_manager,1,1,1,1
+optesis_direction_manager,Direction Manager,model_optesis_direction,group_manager,1,1,1,1
+optesis_department_manager,Department Manager,model_optesis_department,group_manager,1,1,1,1
+optesis_service_manager,Service Manager,model_optesis_service,group_manager,1,1,1,1
+optesis_site_manager,Site Manager,model_optesis_site,group_manager,1,1,1,1
+optesis_building_manager,Building Manager,model_optesis_building,group_manager,1,1,1,1
+optesis_level_manager,Level Manager,model_optesis_level,group_manager,1,1,1,1
+optesis_room_manager,Room Manager,model_optesis_room,group_manager,1,1,1,1
+optesis_asset_transient_manager,Asset Transient Manager,model_optesis_asset_asset_transient,group_manager,1,1,1,1
+optesis_account_asset_log_manager,Account Asset Log Manager,model_optesis_account_asset_log,group_manager,1,1,1,1
+product_access_product_manager,Product Manager,product.model_product_product,group_manager,1,1,1,1
+product_access_template_manager,Product Template Manager,product.model_product_product,group_manager,1,1,1,1
+product_access_price_history_manager,Price History Manager,product.model_product_price_history,group_manager,1,1,1,1
+
+# ------------------- INVENTAIRE -------------------
+optesis_asset_inventaire,Asset Inventaire,model_optesis_asset_asset,group_inventaire,1,1,1,1
+optesis_control_inventaire,Control Inventaire,model_optesis_control,group_inventaire,1,1,1,1
+optesis_asset_transfert_inventaire,Asset Transfert Inventaire,model_optesis_asset_transfert,group_inventaire,1,1,1,1
+optesis_family_inventaire,Family Inventaire,model_optesis_family,group_inventaire,1,1,1,1
+optesis_product_inventaire,Product Inventaire,model_optesis_product,group_inventaire,1,1,1,1
+optesis_condition_inventaire,Condition Inventaire,model_optesis_condition,group_inventaire,1,1,1,1
+optesis_direction_inventaire,Direction Inventaire,model_optesis_direction,group_inventaire,1,1,1,1
+optesis_department_inventaire,Department Inventaire,model_optesis_department,group_inventaire,1,1,1,1
+optesis_service_inventaire,Service Inventaire,model_optesis_service,group_inventaire,1,1,1,1
+optesis_site_inventaire,Site Inventaire,model_optesis_site,group_inventaire,1,1,1,1
+optesis_building_inventaire,Building Inventaire,model_optesis_building,group_inventaire,1,1,1,1
+optesis_level_inventaire,Level Inventaire,model_optesis_level,group_inventaire,1,1,1,1
+optesis_room_inventaire,Room Inventaire,model_optesis_room,group_inventaire,1,1,1,1
+optesis_asset_transient_inventaire,Asset Transient Inventaire,model_optesis_asset_asset_transient,group_inventaire,1,1,1,1
+optesis_account_asset_log_inventaire,Account Asset Log Inventaire,model_optesis_account_asset_log,group_inventaire,1,1,1,1
+product_access_product_inventaire,Product Inventaire,product.model_product_product,group_inventaire,1,1,1,0
+product_access_template_inventaire,Product Template Inventaire,product.model_product_product,group_inventaire,1,1,1,0
+product_access_price_history_inventaire,Price History Inventaire,product.model_product_price_history,group_inventaire,1,1,1,0
+
+# ------------------- ADMIN -------------------
+optesis_asset_admin,Asset Admin,model_optesis_asset_asset,group_admin,1,1,1,1
+optesis_control_admin,Control Admin,model_optesis_control,group_admin,1,1,1,1
+optesis_asset_transfert_admin,Asset Transfert Admin,model_optesis_asset_transfert,group_admin,1,1,1,1
+optesis_family_admin,Family Admin,model_optesis_family,group_admin,1,1,1,1
+optesis_product_admin,Product Admin,model_optesis_product,group_admin,1,1,1,1
+optesis_condition_admin,Condition Admin,model_optesis_condition,group_admin,1,1,1,1
+optesis_direction_admin,Direction Admin,model_optesis_direction,group_admin,1,1,1,1
+optesis_department_admin,Department Admin,model_optesis_department,group_admin,1,1,1,1
+optesis_service_admin,Service Admin,model_optesis_service,group_admin,1,1,1,1
+optesis_site_admin,Site Admin,model_optesis_site,group_admin,1,1,1,1
+optesis_building_admin,Building Admin,model_optesis_building,group_admin,1,1,1,1
+optesis_level_admin,Level Admin,model_optesis_level,group_admin,1,1,1,1
+optesis_room_admin,Room Admin,model_optesis_room,group_admin,1,1,1,1
+optesis_asset_transient_admin,Asset Transient Admin,model_optesis_asset_asset_transient,group_admin,1,1,1,1
+optesis_account_asset_log_admin,Account Asset Log Admin,model_optesis_account_asset_log,group_admin,1,1,1,1
+product_access_product_admin,Product Admin,product.model_product_product,group_admin,1,1,1,1
+product_access_template_admin,Product Template Admin,product.model_product_product,group_admin,1,1,1,1
+product_access_price_history_admin,Price History Admin,product.model_product_price_history,group_admin,1,1,1,1
+
+# ------------------- UTILISATEURS -------------------
+product_access_product_user,Product User,product.model_product_product,base.group_user,1,1,1,0
+product_access_template_user,Product Template User,product.model_product_template,base.group_user,1,1,1,0
+product_access_price_history_user,Price History User,product.model_product_price_history,base.group_user,1,1,1,0
+
+# ------------------- LECTURE SEULE -------------------
+optesis_asset_read_all,Asset Read All,model_optesis_asset_asset,,1,0,0,0
+optesis_control_read_all,Control Read All,model_optesis_control,,1,0,0,0
+optesis_asset_transfert_read_all,Asset Transfert Read All,model_optesis_asset_transfert,,1,0,0,0
+optesis_family_read_all,Family Read All,model_optesis_family,,1,0,0,0
+optesis_product_read_all,Product Read All,model_optesis_product,,1,0,0,0
+optesis_condition_read_all,Condition Read All,model_optesis_condition,,1,0,0,0
+optesis_direction_read_all,Direction Read All,model_optesis_direction,,1,0,0,0
+optesis_department_read_all,Department Read All,model_optesis_department,,1,0,0,0
+optesis_service_read_all,Service Read All,model_optesis_service,,1,0,0,0
+optesis_site_read_all,Site Read All,model_optesis_site,,1,0,0,0
+optesis_building_read_all,Building Read All,model_optesis_building,,1,0,0,0
+optesis_level_read_all,Level Read All,model_optesis_level,,1,0,0,0
+optesis_room_read_all,Room Read All,model_optesis_room,,1,0,0,0
+optesis_asset_transient_read_all,Asset Transient Read All,model_optesis_asset_asset_transient,,1,0,0,0
+optesis_account_asset_log_read_all,Account Asset Log Read All,model_optesis_account_asset_log,,1,0,0,0
+product_access_product_read_all,Product Read All,product.model_product_product,,1,0,0,0
+product_access_template_read_all,Product Template Read All,product.model_product_product,,1,0,0,0
+product_access_price_history_read_all,Price History Read All,product.model_product_price_history,,1,0,0,0

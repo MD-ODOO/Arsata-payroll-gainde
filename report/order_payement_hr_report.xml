@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <data>
+
+        <!-- ===============================
+             ACTION REPORT
+        ================================ -->
+        <record id="action_report_ordre_virement_hr" model="ir.actions.report">
+            <field name="name">Ordre de Virement</field>
+            <field name="model">wizard.ordre.virement.hr</field>
+            <field name="report_type">qweb-pdf</field>
+            <field name="report_name">arsata_payroll.report_pay_order</field>
+            <field name="report_file">arsata_payroll.report_pay_order</field>
+            <field name="binding_model_id" ref="arsata_payroll.model_wizard_ordre_virement_hr"/>
+            <field name="binding_type">report</field>
+        </record>
+
+        <!-- ===============================
+             QWEB TEMPLATE
+        ================================ -->
+    <template id="report_pay_order">
+    <t t-call="web.html_container">
+        <t t-call="web.external_layout">
+            <div class="page">
+
+                <h3 style="text-align:center;">ORDRE DE VIREMENT</h3>
+
+                <p>
+                    <strong>Période :</strong>
+                    <t t-esc="date_from"/> au
+                    <t t-esc="date_top"/>
+                </p>
+
+                <table class="table table-bordered" style="width:100%;">
+                    <thead>
+                        <tr>
+                            <th>Employé</th>
+                            <th>Banque</th>
+                            <th>Compte</th>
+                            <th style="text-align:right;">Net à payer</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <t t-foreach="load_lines" t-as="line">
+                            <tr>
+                                <td><t t-esc="line['employee_name']"/></td>
+                                <td><t t-esc="line['bank_name']"/></td>
+                                <td><t t-esc="line['account_number']"/></td>
+                                <td style="text-align:right;">
+                                    <t t-esc="'{0:,.0f}'.format(line['net']).replace(',', ' ')"/>
+                                </td>
+                            </tr>
+                        </t>
+                    </tbody>
+                </table>
+
+            </div>
+        </t>
+    </t>
+</template>
+
+
+
+
+    </data>
+
+</odoo>
