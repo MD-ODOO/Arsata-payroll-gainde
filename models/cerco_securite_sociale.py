@@ -40,5 +40,5 @@ class CercoPayslipLinesSecuriteSociale(models.TransientModel):
             }
         }
 
-        return self.env.ref('arsata_payroll.report_css').report_action(self, data=data)
+        return self.env.ref('paie_gainde.report_css').report_action(self, data=data)
 

@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 import logging
-from datetime import datetime, time
+from datetime import datetime, time,date
 from dateutil.relativedelta import relativedelta
 from pytz import timezone
+
 
 from odoo import api, fields, models, _
 
@@ -19,9 +20,9 @@ class HrPayslip(models.Model):
     # CHAMPS
     # ------------------------------
 
-    national_agent = fields.Boolean(string='Agent national ?', related='employee_id.national_agent')
+    
 
-    payslip_period_id = fields.Many2one('hr.period', string="Période de paie")
+    #payslip_period_id = fields.Many2one('hr.period', string="Période de paie")
 
     typePaiement = fields.Selection([
         ('espece', 'Espèces'),
@@ -33,13 +34,13 @@ class HrPayslip(models.Model):
     seniority_month = fields.Integer(compute='_compute_seniority', store=True)
     seniority_char = fields.Char(compute='_compute_seniority', store=True)
 
-    nb_part_of_payslip = fields.Float(string='Nombre de Part',store=True)
+    nb_part_of_payslip = fields.Float(string='Nombre de Part IR',store=True)
     trimf = fields.Float(string='Trimf',store=True)
     total_brut_annuel = fields.Float(compute='_compute_total_brut_annuel', store=True)
     amount_net = fields.Float(string="Net à payer", store=True)
 
     employee_bank_id = fields.Many2one('hr.bank.employee')
-    bank_id = fields.Many2one(related='employee_bank_id.bank_id', store=True)
+   
 
     # ------------------------------
     # ONCHANGE PERIODE
@@ -59,14 +60,14 @@ class HrPayslip(models.Model):
             slip.seniority_year = 0
             slip.seniority_month = 0
             slip.seniority_char = ''
-            slip.nb_part_of_payslip = 1
+            slip.nb_part_of_payslip = 0
 
             if slip.contract_id and slip.contract_id.date_start and slip.date_to:
                 delta = relativedelta(slip.date_to, slip.contract_id.date_start)
                 slip.seniority_year = delta.years
                 slip.seniority_month = delta.months
-                slip.seniority_char = f"{delta.years} an(s) {delta.months} mois"
-                slip.nb_part_of_payslip = slip.employee_id.children or 1
+                slip.seniority_char = f"{delta.years} an(s) {delta.months} mois {delta.days} jours"
+                slip.nb_part_of_payslip = slip.employee_id.nb_part or 1
                 slip.trimf = slip.employee_id.trimf or 1
 
     # ------------------------------
@@ -543,18 +544,14 @@ class HrPayslip(models.Model):
 class HrPayslipLine(models.Model):
     _inherit = 'hr.payslip.line'
 
-    payslip_date_from = fields.Date(related='slip_id.date_from', store=True)
-    payslip_date_to = fields.Date(related='slip_id.date_to', store=True)
+    payslip_date_from = fields.Date(string='Date Début',related='slip_id.date_from', store=True)
+    payslip_date_to = fields.Date(string='Date Fin',related='slip_id.date_to', store=True)
 
     # matricule = fields.Char(related='employee_id.otherid', store=True)
     # gender = fields.Selection(related='employee_id.gender', store=True)
     typePaiement = fields.Selection(related='slip_id.typePaiement', store=True)
     
-class HrSalaryRulesIherite(models.Model):
-    _inherit = 'hr.salary.rule'
-    
 
-    struct_id = fields.Many2one('hr.payroll.structure', string="Structure",required=False)
 
 
 
@@ -586,3 +583,168 @@ class HrPayrollStructure(models.Model):
             })
             for rule in rules
         ]
+        
+class CompanyCfec(models.Model):
+    _name = 'company.cfce'
+    
+
+    name = fields.Float( string="Valeur CFCE",required=True,default=3)
+    plafond_cadre = fields.Float( string="Ipres Plafond CADRE",required=True,default=1296000)
+    plafond_general = fields.Float( string="Ipres Plafond CADRE",required=True,default=432000)
+    
+class PrimeAttribution(models.Model):
+    _name = 'prime.attribution'
+    
+
+    name = fields.Char(
+    string="Référence",
+    readonly=True,
+    copy=False,
+    default="Nouveau"
+)
+    date_fin = fields.Date( string="Date Fin",required=True)
+    date_debut = fields.Date(
+        string="Date début",
+        required=True,
+        default=fields.Date.today
+    )
+    categ_id = fields.Many2one('hr.categ.prime', string="Catégorie",required=True)
+    type_prime= fields.Selection([
+        ('religieuse', 'Reliegieuse'),
+        ('tech', 'Technique'),
+        ('13eme', '13ème Mois')
+        
+
+    ], string='Type de prime',required=True)
+    
+    valeur_prime=fields.Float('Valeur Prime',required=True)
+    
+    state = fields.Selection([
+        ('draft', 'Brouillon'),
+        ('active', 'Active'),
+        ('expired', 'Expirée'),
+        ('cancelled', 'Annulée'),
+    ], compute="_compute_state", store=False)
+    
+    active = fields.Boolean(default=True)
+    
+    manual_state = fields.Selection([
+        ('draft', 'Brouillon'),
+        ('confirmed', 'Confirmé'),
+        ('cancelled', 'Annulé'),
+    ], default='draft')
+    
+    employee_line_ids = fields.One2many(
+    'prime.attribution.line',
+    'prime_id',
+    compute="_compute_employee_lines",
+    string="Employés concernés"
+)
+
+
+   
+    
+    @api.model
+    def create(self, vals):
+        vals['name'] = self.env['ir.sequence'].next_by_code('prime.attribution')
+        record = super().create(vals)
+        #record._apply_prime()
+        return record
+        
+    
+    def action_confirm(self):
+        for rec in self:
+            if rec.date_fin < rec.date_debut:
+                raise ValidationError("La date de fin doit être supérieure à la date de début.")
+            rec.manual_state = 'confirmed'
+        
+    def action_cancel(self):
+        self.manual_state = 'cancelled'
+
+    def action_reset_draft(self):
+        self.manual_state = 'draft'
+        
+    
+
+    
+
+    # =====================
+    # AUTO EXPIRATION
+    # =====================
+
+    def check_expired(self):
+        today = fields.Date.today()
+        expired_records = self.search([
+            ('state', '=', 'active'),
+            ('date_fin', '<', today)
+        ])
+        expired_records.write({'state': 'expired'})
+    
+    
+    @api.depends('categ_id', 'type_prime')
+    def _compute_employee_lines(self):
+    
+        for rec in self:
+            rec.employee_line_ids = [(5, 0, 0)]
+    
+            if not rec.categ_id:
+                continue
+    
+            employees = self.env['hr.employee'].search([
+                ('categ_for_prime', 'in', rec.categ_id.id)
+            ])
+    
+            lines = []
+    
+            for emp in employees:
+                contract = emp.contract_id
+                if not contract:
+                    continue
+    
+                values = {
+                    'employee_id': emp.id,
+                    'contract_id': contract.id,
+                    'prime_religieuse': contract.bourse_religieuse,
+                    'prime_tech': contract.prime_tech,
+                    'trezieme_moi': contract.trezieme_moi,
+                }
+    
+                lines.append((0, 0, values))
+    
+            rec.employee_line_ids = lines
+    
+    @api.depends('manual_state', 'date_debut', 'date_fin')
+    def _compute_state(self):
+        today = fields.Date.today()
+
+        for rec in self:
+            if rec.manual_state == 'cancelled':
+                rec.state = 'cancelled'
+
+            elif rec.manual_state == 'draft':
+                rec.state = 'draft'
+
+            elif rec.manual_state == 'confirmed':
+                if rec.date_debut <= today <= rec.date_fin:
+                    rec.state = 'active'
+                elif today > rec.date_fin:
+                    rec.state = 'expired'
+                else:
+                    rec.state = 'draft'
+    
+    
+
+
+class PrimeAttributionLine(models.TransientModel):
+    _name = 'prime.attribution.line'
+    _description = 'Lignes Employés Prime'
+
+    prime_id = fields.Many2one('prime.attribution')
+
+    employee_id = fields.Many2one('hr.employee')
+    contract_id = fields.Many2one('hr.contract')
+
+    prime_religieuse = fields.Float()
+    prime_tech = fields.Float()
+    trezieme_moi = fields.Float()
+

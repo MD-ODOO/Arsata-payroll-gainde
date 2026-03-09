@@ -6,7 +6,7 @@ import logging
 _logger = logging.getLogger(__name__)
 
 class PayslipReport(models.AbstractModel):
-    _name = 'report.arsata_payroll.report_payroll_cesag'
+    _name = 'report.paie_gainde.report_payroll_cesag'
     _description = 'Bulletin de Paie Cesag'
 
     @api.model

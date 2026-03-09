@@ -8,30 +8,41 @@ from babel.dates import format_date
 
 
 class IpresXlsxReport(models.AbstractModel):
-    _name = 'report.arsata_payroll.report_ipres_xlsx' 
+    _name = 'report.paie_gainde.report_ipres_xlsx' 
     _inherit = 'report.report_xlsx.abstract'
-
+    _description = u'reporting'
     def generate_xlsx_report(self, workbook, data, wizard):
-        # Configuration des formats
-        header_fmt = workbook.add_format({'bold': True, 'border': 1, 'align': 'center', 'bg_color': '#D3D3D3'})
+
+        header_fmt = workbook.add_format({
+            'bold': True, 'border': 1, 'align': 'center', 'bg_color': '#D3D3D3'
+        })
         cell_fmt = workbook.add_format({'border': 1})
         title_fmt = workbook.add_format({'bold': True, 'font_size': 14})
-        
+
         sheet = workbook.add_worksheet('IPRES')
 
-        # 1. INFORMATIONS DE L'EMPLOYEUR (En-tête)
+        # ===============================
+        # 1. EN-Tï¿½TE EMPLOYEUR
+        # ===============================
         company = self.env.company
-        sheet.write('A1', 'NOM EMPLOYEUR :', title_fmt)
-        sheet.write('B1', company.name)
-        
-        sheet.write('A2', 'ANNEE :', title_fmt)
-        sheet.write('B2', wizard.date_to.year)
-        
-        sheet.write('A3', 'MOIS :', title_fmt)
-        sheet.write('B3', wizard.date_to.strftime('%B')) # Affiche le mois en texte (ex: Décembre)
+        sheet.write('A2', 'NOM EMPLOYEUR :', title_fmt)
+        sheet.write('A3', company.name)
 
-        # 2. EN-TETE DU TABLEAU DES SALARIES
-        # On commence à la ligne 6 pour laisser de l'espace après l'en-tête employeur
+        sheet.write('B2', 'ANNEE :', title_fmt)
+        sheet.write('B3', wizard.date_to.year)
+        
+
+        mois_fr = {
+            1: 'Janvier', 2: 'Fevrier', 3: 'Mars', 4: 'Avril',
+            5: 'Mai', 6: 'Juin', 7: 'Juillet', 8: 'Aout',
+            9: 'Septembre', 10: 'Octobre', 11: 'Novembre', 12: 'Decembre'
+        }
+        sheet.write('C2', 'MOIS :', title_fmt)
+        sheet.write('C3', mois_fr[wizard.date_to.month])
+
+        # ===============================
+        # 2. EN-Tï¿½TES TABLEAU IPRES
+        # ===============================
         headers = [
             'Num Assurance Sociale',
             'Nom',
@@ -48,9 +59,11 @@ class IpresXlsxReport(models.AbstractModel):
         for col, title in enumerate(headers):
             sheet.write(header_row, col, title, header_fmt)
 
-        # 3. COLLECTE DES DONNEES
+        # ===============================
+        # 3. COLLECTE DES DONNï¿½ES
+        # ===============================
         payslips = self.env['hr.payslip'].search([
-            ('state', 'in', ['done', 'paid']),
+            ('state', '=', 'paid'),
             ('date_from', '>=', wizard.date_from),
             ('date_to', '<=', wizard.date_to),
         ])
@@ -61,59 +74,60 @@ class IpresXlsxReport(models.AbstractModel):
             emp = slip.employee_id
 
             if emp.id not in employees_data:
-               employees_data[emp.id] = {
-                  'employee': emp,
-                  'num_as': emp.ssnid or '',
-                  'nom': emp.name.split(' ')[-1] if emp.name else '',
-                  'prenom': ' '.join(emp.name.split(' ')[:-1]) if emp.name else '',
-                  'type_piece': 'Passeport' if emp.passport_id else 'CNI',
-                  'num_piece': emp.passport_id or emp.identification_id or '',
-                  'brut_ipres': 0.0,
-                  'hours': 0.0,
-                  'is_cadre': 'Non',
-        }
+                employees_data[emp.id] = {
+                    'employee': emp,
+                    'num_as': emp.ssnid or '',
+                    'nom': emp.name.split(' ')[-1] if emp.name else '',
+                    'prenom': ' '.join(emp.name.split(' ')[:-1]) if emp.name else '',
+                    'type_piece': 'Passeport' if emp.passport_id else 'CNI',
+                    'num_piece': emp.passport_id or emp.identification_id or '',
+                    'brut_ipres': 0.0,
+                    'hours': 0.0,
+                    'is_cadre': 'Non',
+                }
 
-    # ?? Brut IPRES (catégorie TIPRES)
-        for line in slip.line_ids:
-            if line.code and line.code == 'TPRES':
-               employees_data[emp.id]['brut_ipres'] += line.total
+            # Brut IPRES (TPRES)
+            for line in slip.line_ids:
+                if line.code == 'GROSS':
+                    employees_data[emp.id]['brut_ipres'] += line.total
 
-    # ?? Temps de présence
-        for wd in slip.worked_days_line_ids:
-            employees_data[emp.id]['hours'] = "173.33"
+            # Temps de prï¿½sence
+            total_hours = 0.0
 
-    # ?? Cadre
-        if slip.contract_id and slip.contract_id.regime_type == 'CADRE':
-           employees_data[emp.id]['is_cadre'] = 'Oui'
+            for wd in slip.worked_days_line_ids:
+               total_hours += wd.number_of_hours
 
-        # 4. REMPLISSAGE DU TABLEAU
+            employees_data[emp.id]['hours'] = min(total_hours, 173.33)
+
+            # Cadre
+            if slip.contract_id and slip.contract_id.regime_type == 'cadre':
+                employees_data[emp.id]['is_cadre'] = 'Oui'
+
+        # ===============================
+        # 4. REMPLISSAGE EXCEL
+        # ===============================
         row = 6
         for data_emp in employees_data.values():
+            emp = data_emp['employee']
+
+            contract = self.env['hr.contract'].search([
+                ('employee_id', '=', emp.id),
+                ('state', '=', 'open')
+            ], limit=1)
+
             sheet.write(row, 0, data_emp['num_as'], cell_fmt)
             sheet.write(row, 1, data_emp['nom'], cell_fmt)
             sheet.write(row, 2, data_emp['prenom'], cell_fmt)
             sheet.write(row, 3, data_emp['type_piece'], cell_fmt)
             sheet.write(row, 4, data_emp['num_piece'], cell_fmt)
-            
-            # Type de contrat depuis le dernier contrat de l'employé
-            for data_emp in employees_data.values():
-                emp = data_emp['employee']
-                contract = self.env['hr.contract'].search([
-                          ('employee_id', '=', emp.id),
-                          ('state', '=', 'open')
-                           ], limit=1)
-                sheet.write(row, 5, contract.contract_type_id.name if contract else '', cell_fmt)
-            
+            sheet.write(row, 5, contract.contract_type_id.name if contract else '', cell_fmt)
             sheet.write(row, 6, data_emp['brut_ipres'], cell_fmt)
             sheet.write(row, 7, data_emp['hours'], cell_fmt)
             sheet.write(row, 8, data_emp['is_cadre'], cell_fmt)
+
             row += 1
 
-        # Ajustement automatique de la largeur des colonnes
-        sheet.set_column('A:I', 20)
-        
-        
-        ##################################
+        sheet.set_column('A:I', 22)
         
 
 
@@ -123,13 +137,13 @@ class IpresXlsxReport(models.AbstractModel):
 
 
 class ReportCotisationIPRES(models.AbstractModel):
-    _name = 'report.arsata_payroll.report_ipres_template'
+    _name = 'report.paie_gainde.report_ipres_template'
     _description = 'Rapport IPRES PDF - Final Stable Odoo 18'
 
     @api.model
     def _get_report_values(self, docids, data=None):
 
-        # ================= SÉCURITÉ =================
+        # ================= Sï¿½CURITï¿½ =================
         data = data or {}
 
         date_from = data.get('date_from')
@@ -146,7 +160,7 @@ class ReportCotisationIPRES(models.AbstractModel):
 
         # ================= BULLETINS =================
         slips = self.env['hr.payslip'].search([
-            ('state', 'in', ['done', 'paid']),
+            ('state', 'in', [ 'done','paid']),
             ('date_from', '<=', date_to),
             ('date_to', '>=', date_from),
             ('company_id', '=', company.id),
@@ -158,7 +172,7 @@ class ReportCotisationIPRES(models.AbstractModel):
                 "Verifiez que les bulletins sont valides ou payes."
             )
 
-        # ================= DONNÉES =================
+        # ================= DONNï¿½ES =================
         rows = []
         totals = defaultdict(float)
         index = 1
@@ -171,15 +185,21 @@ class ReportCotisationIPRES(models.AbstractModel):
             # --- Bases IPRES ---
             rg_base = line_map.get('CASH3', 0.0)
             rc_base = line_map.get('CASH4', 0.0)
+            rc_con_base = line_map.get('CASH6', 0.0)
+            rg_con_base = line_map.get('ALCON', 0.0)
 
             # --- Cotisations ---
             rg_emp = round(rg_base * 0.056, 1)
             rg_pat = round(rg_base * 0.084, 1)
+            rg_con_emp = round(rg_con_base * 0.056, 1)
+            rg_con_pat = round(rg_con_base * 0.084, 1)
 
             rc_emp = round(rc_base * 0.024, 1)
             rc_pat = round(rc_base * 0.036, 1)
+            rc_con_emp = round(rc_con_base * 0.024, 1)
+            rc_con_pat = round(rc_con_base * 0.036, 1)
 
-            total_line = round(rg_emp + rg_pat + rc_emp + rc_pat, 1)
+            total_line = round(rg_emp + rg_pat + rc_emp + rc_pat+rg_con_emp + rg_con_pat + rc_con_emp + rc_con_pat, 1)
 
             row = {
                 'num': index,
@@ -191,26 +211,42 @@ class ReportCotisationIPRES(models.AbstractModel):
                 'rg_base': round(rg_base, 1),
                 'rg_emp': rg_emp,
                 'rg_pat': rg_pat,
+                
+                'rg_con_base': round(rg_con_base, 1),
+                'rg_con_emp': rg_con_emp,
+                'rg_con_pat': rg_con_pat,
 
                 'rc_base': round(rc_base, 1),
                 'rc_emp': rc_emp,
                 'rc_pat': rc_pat,
+                
+                'rc_con_base': round(rc_con_base, 1),
+                'rc_con_emp': rc_con_emp,
+                'rc_con_pat': rc_con_pat,
 
                 'total': total_line,
             }
 
             rows.append(row)
 
-            # --- Totaux cumulés (toutes pages) ---
+            # --- Totaux cumulï¿½s (toutes pages) ---
             totals['brut'] += row['brut']
 
             totals['rg_base'] += row['rg_base']
             totals['rg_emp'] += rg_emp
             totals['rg_pat'] += rg_pat
+            
+            totals['rg_con_base'] += row['rg_con_base']
+            totals['rg_con_emp'] += rg_con_emp
+            totals['rg_con_pat'] += rg_con_pat
 
             totals['rc_base'] += row['rc_base']
             totals['rc_emp'] += rc_emp
             totals['rc_pat'] += rc_pat
+            
+            totals['rc_con_base'] += row['rc_con_base']
+            totals['rc_con_emp'] += rc_con_emp
+            totals['rc_con_pat'] += rc_con_pat
 
             totals['total'] += total_line
 
@@ -240,7 +276,7 @@ class ReportCotisationIPRES(models.AbstractModel):
 
 
 class ReportLivrePaie(models.AbstractModel):
-    _name = "report.arsata_payroll.livre_paie_template"
+    _name = "report.paie_gainde.livre_paie_template"
     _description = "Livre de paie PDF"
 
     @api.model
@@ -262,14 +298,14 @@ class ReportLivrePaie(models.AbstractModel):
             for line in slip.line_ids:
                 employees[emp][(line.code, line.name)] += line.amount
                 
-        company = self.env.company   # ? TRÈS IMPORTANT
+        company = self.env.company   # ? TRï¿½S IMPORTANT
 
         return {
             "employees": employees,
             "date_from": wizard.date_from,
             "date_to": wizard.date_to,
             "year": wizard.date_to.year,
-            "company": company,        # ? injecté dans QWeb
+            "company": company,        # ? injectï¿½ dans QWeb
         }
 
 
@@ -279,7 +315,7 @@ class ReportLivrePaie(models.AbstractModel):
 
 
 class ReportRASDGID(models.AbstractModel):
-    _name = 'report.arsata_payroll.report_ras_template'
+    _name = 'report.paie_gainde.report_ras_template'
     _description = 'Declaration RAS DGID Salaires'
 
     @api.model
@@ -361,7 +397,7 @@ class ReportRASDGID(models.AbstractModel):
         # =========================
         ir_retenu = sum_line('CSAL1')
         trimf = sum_line('CSAL2')
-        cfce = sum_line('CFCE')
+        cfce = sum_line('CPAT5')
         gta = sum_line('GTA')
 
         montant_net_ir = ir_retenu - gta
@@ -447,7 +483,7 @@ class ReportRASDGID(models.AbstractModel):
 
 
 class ReportDeclarationCSS(models.AbstractModel):
-    _name = 'report.arsata_payroll.report_css_declaration'
+    _name = 'report.paie_gainde.report_css_declaration'
     _description = 'Declaration mensuelle de cotisations CSS'
 
     @api.model
@@ -498,14 +534,14 @@ class ReportDeclarationCSS(models.AbstractModel):
             if not contract or not contract.contract_type_id:
                 continue
 
-            ctype = (contract.contract_type_id.name or '').lower()
+            ctype = (contract.contract_type_id.name or '')
 
             brut = sum(
                 slip.line_ids.filtered(lambda l: l.code == 'GROSS').mapped('total')
             )
             total_salaires += brut
 
-            if 'permanent' in ctype:
+            if 'Permanent' in ctype or 'CDI' in ctype:
                 if brut >= 63000:
                     eff_perm_ge_63 += 1
                     sal_perm_ge_63 += brut
@@ -565,7 +601,7 @@ class ReportDeclarationCSS(models.AbstractModel):
             'effectif_global': len(slips),
             'total_salaires': total_salaires,
 
-            # Effectifs / montants A à F
+            # Effectifs / montants A ï¿½ F
             'eff_perm_ge_63': eff_perm_ge_63, 'sal_perm_ge_63': sal_perm_ge_63,
             'eff_perm_lt_63': eff_perm_lt_63, 'sal_perm_lt_63': sal_perm_lt_63,
             'eff_cdd_ge_63': eff_cdd_ge_63,   'sal_cdd_ge_63': sal_cdd_ge_63,

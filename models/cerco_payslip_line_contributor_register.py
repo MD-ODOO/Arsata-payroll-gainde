@@ -38,6 +38,6 @@ class CercoPayslipLinesContributionRegister(models.TransientModel):
             }
         }
 
-        return self.env.ref('arsata_payroll.action_report_declaration_retenu').report_action(self, data=data)
+        return self.env.ref('paie_gainde.action_report_declaration_retenu').report_action(self, data=data)
     
 

@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 from datetime import date,datetime
-from odoo import api, fields, models 
+from odoo import api, fields, models,_
 from dateutil.relativedelta import relativedelta
-from odoo.exceptions import UserError
+from odoo.exceptions import UserError,ValidationError
 import logging
 
 _logger = logging.getLogger(__name__)
@@ -12,31 +12,6 @@ _logger = logging.getLogger(__name__)
 # =====================================================
 # PRIMES
 # =====================================================
-
-class CercoPrime(models.Model):
-    _name = 'cerco.prime'
-    _description = 'Élément de prime'
-
-    name = fields.Char(string='Élément de salaire', required=True)
-
-
-class CercoPrimeLine(models.Model):
-    _name = 'cerco.prime.line'
-    _description = 'Ligne élément de prime'
-    
-    name = fields.Many2one('cerco.prime', required=True)
-    amount = fields.Float(string="Montant")
-    job_id = fields.Many2one('hr.job', string='Poste')
-
-
-class HrJob(models.Model):
-    _inherit = 'hr.job'
-
-    prime_ids = fields.One2many(
-        'cerco.prime.line',
-        'job_id',
-        string='Éléments de salaire'
-    )
 
 
 # =====================================================
@@ -48,17 +23,182 @@ class HrContract(models.Model):
 
     categ_id = fields.Many2one(
         'line.cerco.convention',
-        string='Catégorie',
+        string='Catégorie Employé',
         required=True
     )
 
-    # function_id = fields.Many2one('cerco.function', string='Fonction')
+    fin_contrat_motif = fields.Selection(
+        [
+            ('demission', 'Démission'),
+            ('licenciement', 'Licenciement'),
+            ('faute_lourde', 'Faute lourde'),
+        ],
+        string="Motif de fin de contrat",
+        tracking=True
+    )
+
+    fin_contrat_valide = fields.Boolean(
+        string="Fin de contrat validée",
+        default=False
+    )
+
+    date_preavis = fields.Date(
+        string="Date de début du préavis"
+    )
+
+    duree_preavis = fields.Integer(
+        string="Durée du préavis (jours)",
+        compute="_compute_duree_preavis",
+        store=True
+    )
+
+    indemite_preavis = fields.Float(
+        string="Indemnité de préavis",
+        compute="_compute_indemnite_preavis",
+        store=True
+    )
+
+    is_cdi = fields.Boolean(
+        compute="_compute_is_cdi",
+        store=True
+    )
+
+    show_preavis = fields.Boolean(
+        compute="_compute_show_preavis",
+        store=True
+    )
+
+    contrat_termine = fields.Boolean(
+        compute="_compute_contrat_termine",
+        store=True
+    )
+    
+    show_fin_contrat = fields.Boolean(
+    compute="_compute_show_fin_contrat",
+    store=True
+    )
+
+    # ======================
+    # COMPUTES
+    # ======================
+
+    @api.depends('contract_type_id.code')
+    def _compute_is_cdi(self):
+        for rec in self:
+            rec.is_cdi = rec.contract_type_id.code == 'cdi'
+
+    @api.depends('date_end', 'date_preavis')
+    def _compute_duree_preavis(self):
+        for rec in self:
+            if rec.date_end and rec.date_preavis:
+                rec.duree_preavis = (rec.date_end - rec.date_preavis).days
+            else:
+                rec.duree_preavis = 0
+
+    @api.depends('duree_preavis', 'wage')
+    def _compute_indemnite_preavis(self):
+        for rec in self:
+            if rec.duree_preavis > 0 and rec.wage:
+                rec.indemite_preavis = (rec.wage / 30) * rec.duree_preavis
+            else:
+                rec.indemite_preavis = 0.0
+
+    @api.depends('contract_type_id.code', 'fin_contrat_motif')
+    def _compute_show_preavis(self):
+        for rec in self:
+            if rec.contract_type_id.code != 'cdi':
+                rec.show_preavis = True
+            elif rec.fin_contrat_motif in ['licenciement','demission']:
+                rec.show_preavis = True
+            else:
+                rec.show_preavis = False
+
+    @api.depends('state')
+    def _compute_contrat_termine(self):
+        for rec in self:
+            rec.contrat_termine = rec.state == 'close'
+
+    # ======================
+    # ONCHANGE
+    # ======================
+
+    @api.onchange('contract_type_id')
+    def _onchange_contract_type_id(self):
+        for rec in self:
+            if rec.contract_type_id.code == 'cdi':
+                rec.date_preavis = False
+                rec.duree_preavis = 0
+                rec.indemite_preavis = 0.0
+
+    # ======================
+    # CONTRAINTES
+    # ======================
+
+    @api.constrains('date_preavis', 'date_end')
+    def _check_dates_preavis(self):
+        for rec in self:
+            if rec.date_preavis and rec.date_end:
+                if rec.date_preavis > rec.date_end:
+                    raise ValidationError(
+                        _("La date de début du préavis ne peut pas être postérieure "
+                          "à la date de fin du contrat.")
+                    )
+
+    # ======================
+    # WORKFLOW NATIF
+    # ======================
+
+    def action_valider_fin_contrat(self):
+        for rec in self:
+            if not rec.fin_contrat_motif:
+                raise ValidationError(
+                    _("Veuillez renseigner le motif de fin de contrat.")
+                )
+            if not rec.date_end:
+                raise ValidationError(
+                    _("Veuillez renseigner la date de fin du contrat.")
+                )
+            rec.fin_contrat_valide = True
+
+    
+        
+    @api.onchange('state')
+    def _onchange_state_reset_fin_contrat(self):
+        for rec in self:
+            if rec.state != 'close':
+                rec.fin_contrat_motif = False
+                rec.date_end = False
+                rec.date_preavis = False
+                rec.duree_preavis = 0
+                rec.indemite_preavis = 0.0
+    
+    @api.depends('state')
+    def _compute_show_fin_contrat(self):
+        for rec in self:
+            rec.show_fin_contrat = rec.state == 'close'
+    
+    def write(self, vals):
+        for rec in self:
+            if vals.get('state') == 'close':
+                if not rec.fin_contrat_motif:
+                    raise ValidationError(
+                        _("Le motif de fin de contrat est obligatoire.")
+                    )
+                if not rec.date_end:
+                    raise ValidationError(
+                        _("La date de fin du contrat est obligatoire.")
+                    )
+        return super().write(vals)
+                        
+                
+    indemite_preavis = fields.Float(string="Indemnite preavis", compute="_compute_indemnite_preavis")
 
     # Salaire & primes principales
     salaire_net = fields.Float('Salaire Net')
-    trezieme_moi = fields.Float('Treizième Mois')
+    trezieme_moi = fields.Float('Treizième Mois',compute="_compute_primes",
+        store=False)
     ret_nsia = fields.Float('Retenue NSIA')
-    ret_pretpersonnel = fields.Float('Retenue Prêt Personnelle')
+    ret_pretpersonnel = fields.Float('Retenue Prêt Personnel')
     ret_cotretraite = fields.Float('Retenue Epargne Retraite')
     ret_parcking = fields.Float('Retenue Prarcking')
     ret_pretvehicul = fields.Float('Retenue Prêt Véhicule')
@@ -70,11 +210,13 @@ class HrContract(models.Model):
     ret_avance_sursalaire = fields.Float('Retenue Avance sur Salaire ')
     ret_avance_surprime = fields.Float('Retenue Avance sur Prime ')
     ret_avance_14mois = fields.Float('Retenue Avance sur 14ème Mois')
+    ret_epargne_illico = fields.Float('Retenue Epargne IILICO')
     
     prime_astreinte = fields.Float('Prime Astreinte')
     prime_exceptionnele = fields.Float('Prime Exceptionnel')
     prime_perfom = fields.Float('Prime de Performance')
-    prime_tech = fields.Float('Primee Technique' )
+    prime_tech = fields.Float('Primee Technique',compute="_compute_primes",
+        store=False )
     prime_Special = fields.Float('Prime Spéciale')
     prime_technicity = fields.Float('Prime de Technicité')
     prime_bourse_religieux = fields.Float('Prime Religieux')
@@ -85,14 +227,15 @@ class HrContract(models.Model):
     rapel_salaire = fields.Float(string="Rappel de Salaire")
     avantage_nature = fields.Float(string="Avantage en Nature")
     prime_anciennete = fields.Float(string="Prime de Fidélité ")
-    bourse_religieuse = fields.Float(string="Bourse Religieuse ")
+    bourse_religieuse = fields.Float(string="Bourse Religieuse ",compute="_compute_primes",
+        store=False)
 
     avance = fields.Float(string="Acompte sur salaire")
     avance_tabaski = fields.Float(string="Avance tabaski")
     avance_korite = fields.Float(string="Avance Korite")
     avance_noel = fields.Float(string="Avance Noel")
 
-    indemite_preavis = fields.Float(string="Indemnite preavis")
+    
     indemite_compensation_preavis = fields.Float(string="Compensation preavis")
     indemite_kilometrique = fields.Float(string="Indemnite Kilometrique")
     indemnite_conges = fields.Float(string="Congés payés non imposable")
@@ -101,14 +244,14 @@ class HrContract(models.Model):
     retenu = fields.Float(string="Retenue pret")
     retenue_car = fields.Float(string="Retenue Car Plan")
     retenu_sante = fields.Float(string="Retenue assurance maladie")
-    retenu_avance_conge = fields.Float(string="Ratenue avance sur Congés")
+    retenu_avance_conge = fields.Float(string="Retenue avance sur Congés")
 
     prime_exc = fields.Float(string="Prime Exceptionnelle")
     prime_rendement = fields.Float(string="Prime de Rendement")
     prime_resp = fields.Float(string="Prime de responsabilite")
     prime_risque = fields.Float(string="Prime de Risque")
     prime_salissure = fields.Float(string="Prime de salissure")
-    prime_transport = fields.Float(string="Prime de transport",default="26000")
+    prime_transport = fields.Float(string="Indemnité de transport",default="26000")
 
     nb_days = fields.Integer(string="Anciennete")
     cumul_jour = fields.Float("Cumul jours anterieur")
@@ -186,7 +329,7 @@ class HrContract(models.Model):
         for emp in self:
             if emp.date_start:
                 d = relativedelta(today, emp.date_start)
-                emp.post_duration = f"{d.years} an(s) et {d.months} mois"
+                emp.post_duration = f"{d.years} an(s) - {d.months} mois - {d.days} mois"
             else:
                 emp.post_duration = ""
 
@@ -200,6 +343,45 @@ class HrContract(models.Model):
     def onchange_categ(self):
         if self.categ_id:
             self.wage = self.categ_id.wage
+            
+    
+    @api.depends('employee_id', 'employee_id.categ_for_prime')
+    def _compute_primes(self):
+    
+        today = fields.Date.today()
+    
+        primes = self.env['prime.attribution'].search([
+            ('manual_state', '=', 'confirmed'),
+            ('date_debut', '<=', today),
+            ('date_fin', '>=', today)
+        ])
+    
+        primes_by_categ = {}
+        for prime in primes:
+            primes_by_categ.setdefault(prime.categ_id.id, []).append(prime)
+    
+        for contract in self:
+            relig_total = 0.0
+            tech_total = 0.0
+            treizieme_total = 0.0
+    
+            categories = contract.employee_id.categ_for_prime
+    
+            for categ in categories:
+                for prime in primes_by_categ.get(categ.id, []):
+                    if prime.type_prime == 'religieuse':
+                        relig_total += prime.valeur_prime
+    
+                    elif prime.type_prime == '13eme':
+                        treizieme_total += prime.valeur_prime
+    
+                    elif prime.type_prime == 'tech':
+                        tech_total += prime.valeur_prime
+    
+            contract.bourse_religieuse = relig_total
+            contract.prime_tech = tech_total
+            contract.trezieme_moi = treizieme_total  
+            
 
 
     # -------------------------------------------------
@@ -244,14 +426,7 @@ class HrContract(models.Model):
     # CONGÉS
     # -------------------------------------------------
 
-    @api.depends('cumul_mesuel', 'nbj_pris', 'nbj_aquis', 'nbj_travail')
-    def _compute_alloc_conges(self):
-        for rec in self:
-            if rec.nbj_pris > 0 and rec.cumul_mesuel:
-                base = rec.nbj_aquis or rec.nbj_travail or 1
-                rec.alloc_conges = (rec.cumul_mesuel * rec.nbj_pris) / base
-            else:
-                rec.alloc_conges = 0.0
+   
 
 
     def _compute_extra_day_seniority(self, date_payslip, nb_days):
@@ -266,11 +441,5 @@ class HrContract(models.Model):
                 rec.nbj_aquis += nb_days
 
 
-# =====================================================
-# CONGÉS – ODOO 18
-# =====================================================
 
-#class HrLeaveType(models.Model):
- #   _inherit = 'hr.leave.type'
-
-  #  code = fields.Char(string="Code")
+#

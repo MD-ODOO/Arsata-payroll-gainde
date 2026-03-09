@@ -70,7 +70,7 @@
           <field name="seniority_char" string="Ancieneté"/>
           <field name="nb_part_of_payslip"/>
           <field name="trimf" string ='Trimf'/>
-          <field name="national_agent"/>
+         
           <field name="amount_net"/>
           <!-- <field name="bank_id"/> -->
         </field>
@@ -101,40 +101,168 @@
       <field name="search_view_id" ref="view_hr_payslip_line_inherit_filter"/>
       <field name="context">{'group_by': ['payslip_date_to:month']}</field>
     </record>
-
-    <!-- ======================================= -->
-    <!-- Actions serveurs pour le calcul et validation des bulletins -->
-    <!-- ======================================= -->
-    <!-- <record id="action_multi_validation" model="ir.actions.server">
-      <field name="name">Calcul des feuilles</field>
-      <field name="model_id" ref="model_hr_payslip"/>
-      <field name="state">code</field>
-      <field name="code">
-        object.pass_to_calculall()
-      </field>
-    </record> -->
-
-    <!-- <record id="action_multi_confirmation" model="ir.actions.server">
-      <field name="name">Confirmer les feuilles</field>
-      <field name="model_id" ref="model_hr_payslip"/>
-      <field name="state">code</field>
-      <field name="code">
-        object.pass_to_confirmall()
-      </field>
-    </record> -->
-
-    <!-- ======================================= -->
-    <!-- Menus Paie -->
-    <!-- ======================================= -->
     
-    <!-- <menuitem id="om_hr_payroll.hr_menu_contract" name="Contrats" parent="cerco_menu_payroll_main" action="hr_contract.action_hr_contract" sequence="1"/>
-    <menuitem id="om_hr_payroll.menu_department_tree" name="Bulletins de paie" parent="cerco_menu_payroll_main" action="om_hr_payroll.action_view_hr_payslip_form" sequence="2"/> -->
-    <!-- <menuitem id="cerco_menu_hr_payslip_run" name="Lots de bulletins" parent="cerco_menu_payroll_main" action="om_hr_payroll.action_hr_payslip_run_tree" sequence="3"/> -->
-    <!-- <menuitem id="cerco_menu_payroll_configuration" name="Configuration" parent="cerco_menu_payroll_root" sequence="2"/>
-    <menuitem id="om_hr_payroll.menu_hr_payroll_structure_view" action="om_hr_payroll.action_view_hr_payroll_structure_list_form" parent="cerco_menu_payroll_configuration" sequence="2"/>
-    <menuitem id="om_hr_payroll.menu_action_hr_salary_rule_form" action="om_hr_payroll.action_salary_rule_form" parent="cerco_menu_payroll_configuration" sequence="11"/>
-    <menuitem id="om_hr_payroll.menu_hr_salary_rule_category" action="om_hr_payroll.action_hr_salary_rule_category" parent="cerco_menu_payroll_configuration" sequence="9"/> 
-    <menuitem id="report_payroll_menu" name="Reporting" parent="hr_payroll.menu_hr_payroll_root" action="action_report_payroll"/> -->
+    
+    
+       
+          <record id="view_hr_company_cfce_tree" model="ir.ui.view">
+            <field name="name">hr.company.cfce.tree</field>
+            <field name="model">company.cfce</field>
+            <field name="arch" type="xml">
+                <list editable="bottom">
+                    <field name="name"/>
+                    <field name="plafond_cadre"/>
+                    <field name="plafond_general"/>
+                </list>
+            </field>
+        </record>
+        
+         <record id="cfce_action" model="ir.actions.act_window">
+            <field name="name">Données Paie</field>
+            <field name="res_model">company.cfce</field>
+            <field name="view_mode">list</field>
+           
+        </record>
+
+        <!-- ============================= -->
+        <!-- Menus VPI et Catégorie  <field name="view_id" ref="view_hr_company_cfce_tree"/>-->
+        <!-- ============================= -->
+        
+        <menuitem id="menu_company_cfce"
+          name="IPRES/CFCE "
+          action="cfce_action"
+          sequence="300"
+          parent="menu_reporting"
+          groups="hr_contract.group_hr_contract_employee_manager"
+           
+          />
+          
+          
+          
+          <record id="view_prime_attribution_tree" model="ir.ui.view">
+    <field name="name">prime.attribution.tree</field>
+    <field name="model">prime.attribution</field>
+    <field name="arch" type="xml">
+        <list  decoration-success="state == 'active'"
+                  decoration-danger="state == 'expired'"
+                  decoration-muted="state == 'cancelled'">
+                <field name="name"/>
+                <field name="categ_id"/>
+                <field name="type_prime"/>
+                <field name="valeur_prime"/>
+                <field name="date_debut"/>
+                <field name="date_fin"/>
+                <field name="state"/>
+        </list>
+    </field>
+</record>
+          
+          <record id="view_prime_attribution_form" model="ir.ui.view">
+    <field name="name">prime.attribution.form</field>
+    <field name="model">prime.attribution</field>
+    <field name="arch" type="xml">
+        <form string="Attribution Prime">
+            <header>
+            <button name="action_confirm"
+                            string="Confirmer"
+                            type="object"
+                            class="btn-primary"
+                            invisible="manual_state != 'draft'"/>
+
+                    <!-- Annuler visible sauf si déjà annulé -->
+                    <button name="action_cancel"
+                            string="Annuler"
+                            type="object"
+                            class="btn-danger"
+                            invisible="manual_state == 'cancelled'"/>
+
+                    <!-- Reset visible seulement si annulé -->
+                    <button name="action_reset_draft"
+                            string="Remettre en brouillon"
+                            type="object"
+                            invisible="manual_state != 'cancelled'"/>
+
+                    <!-- Statusbar dynamique -->
+                    <field name="state"
+                           widget="statusbar"
+                           statusbar_visible="draft,active,expired,cancelled"/>
+            
+            </header>
+            <sheet>
+                 <group>
+                        <group>
+                            <field name="name" readonly="1"/>
+                            <field name="categ_id"/>
+                            <field name="type_prime"/>
+                        </group>
+                        <group>
+                            <field name="valeur_prime"/>
+                            <field name="date_debut"/>
+                            <field name="date_fin"/>
+                        </group>
+                    </group>
+                    <notebook>
+    <page string="Employés concernés">
+        <field name="employee_line_ids">
+
+            <list >
+
+                <field name="employee_id"/>
+                <field name="contract_id"/>
+
+                <!-- Visible si religieuse -->
+                <field name="prime_religieuse"
+                       invisible="parent.type_prime != 'religieuse'"/>
+
+                <!-- Visible si technique -->
+                <field name="prime_tech"
+                       invisible="parent.type_prime != 'tech'"/>
+
+                <!-- Visible si 13eme -->
+                <field name="trezieme_moi"
+                       invisible="parent.type_prime != '13eme'"/>
+
+            </list>
+
+        </field>
+    </page>
+</notebook>
+            </sheet>
+        </form>
+    </field>
+</record>
+        
+        
+          <record id="action_attribution_prime" model="ir.actions.act_window">
+    <field name="name">Attribution Prime</field>
+    <field name="res_model">prime.attribution</field>
+    <field name="view_mode">list,form</field>
+     </record>
+        
+      
+
+    
+  
+  <menuitem id="menu_prime_attribution"
+          name="Attributions Primes"
+          sequence="400"
+          parent="menu_reporting"
+          action="action_attribution_prime"
+          groups="hr_contract.group_hr_contract_employee_manager"/>
+
+     
+          
+          
+          <record id="seq_prime_attribution" model="ir.sequence">
+          <field name="name">Prime Attribution</field>
+          <field name="code">prime.attribution</field>
+          <field name="prefix">PRIME/</field>
+          <field name="padding">4</field>
+      </record>
+    
+
+
+    
 
   </data>
 </odoo>

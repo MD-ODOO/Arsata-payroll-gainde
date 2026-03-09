@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
 {
-    'name': 'ARSATA Payroll',
+    'name': 'GAINDE PAIE',
+        'version': '1.3',
+
     'author': 'Mansour Diop',
     'category': 'Human Resources',
-    'summary': 'Module de paie développé par ARSATA CONSULTING',
+    'summary': 'Module de paie développé par KILIFA CONSULTING',
     'sequence': 9,
+    'license': 'LGPL-3',
     'description': """
 Module de paie complet pour Odoo 18.
 Inclut la gestion des contrats, des bulletins de paie, des règles de salaire,
@@ -15,28 +18,23 @@ des conventions collectives, et les rapports liés aux cotisations sociales.
         'hr',
         'hr_contract',
         'hr_payroll','report_xlsx',
-        # 'arsata_base',
-        # 'hr_payroll_account'
+       
     ],
     'data': [
        
         # Vues
         
         'views/hr_contract_view.xml',
-        'views/periode_paie.xml',
+        'views/report_cotisation_ipres.xml',
+        
         'views/hr_payroll_view.xml',
         
         'views/convention_view.xml',
         'views/ipres_xlsx.xml',
         'views/xls_ipres.xml',
 
+        
 
-        'views/report_declaration_retenu.xml',
-        # 'views/hr_holidays_status_inherit_view.xml',
-       #  'views/cerco_payslip_line_contributor_register.xml',
-        'views/report_cotisation_ipres.xml',
-       # 'views/report_securite_sociale.xml',
-       # 'views/report_declaration_retenu.xml',
         
         # Rapports
         'report/template.xml',
@@ -48,6 +46,7 @@ des conventions collectives, et les rapports liés aux cotisations sociales.
          # Sécurité
         'security/cerco_security.xml',
         'security/ir.model.access.csv',
+        'data/convention_collective_data.xml',
         
        
         

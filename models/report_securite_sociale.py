@@ -7,7 +7,7 @@ _logger = logging.getLogger(__name__)
 
 
 class ReportSecuriteSociale(models.AbstractModel):
-    _name = 'report.arsata_payroll.report_css'
+    _name = 'report.paie_gainde.report_css'
     _description = 'Rapport Sécurité Sociale'
 
     @api.model

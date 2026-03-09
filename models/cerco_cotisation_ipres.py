@@ -38,7 +38,7 @@ class CercoPayslipLinesCotisationIpres(models.TransientModel):
         self.ensure_one()
 
         return self.env.ref(
-        'arsata_payroll.action_report_ipres'
+        'paie_gainde.action_report_ipres'
     ).report_action(
         self,
         data={
@@ -62,7 +62,7 @@ class CercoPayslipLinesCotisationIpres(models.TransientModel):
         ])
 
         return self.env.ref(
-            'arsata_payroll.action_report_vrs'
+            'paie_gainde.action_report_vrs'
         ).with_context(
             payslip_ids=payslips.ids,
             date_from=self.date_from,
@@ -75,7 +75,7 @@ class CercoPayslipLinesCotisationIpres(models.TransientModel):
     
     def action_print_livre_pdf(self):
         return self.env.ref(
-            "arsata_payroll.action_livre_paie_report"
+            "paie_gainde.action_livre_paie_report"
         ).report_action(self)
 
    
@@ -84,7 +84,7 @@ class CercoPayslipLinesCotisationIpres(models.TransientModel):
         return {
             'type': 'ir.actions.report',
             'report_type': 'xlsx',
-            'report_name': 'arsata_payroll.report_ipres_xlsx',
+            'report_name': 'paie_gainde.report_ipres_xlsx',
             'data': {
                 'date_from': self.date_from.isoformat(),
                 'date_to': self.date_to.isoformat(),
@@ -101,7 +101,7 @@ class CercoPayslipLinesCotisationIpres(models.TransientModel):
         }
 
         return self.env.ref(
-            'arsata_payroll.action_report_ras_dgid'
+            'paie_gainde.action_report_ras_dgid'
         ).report_action(
             None, data=data
         )
@@ -110,7 +110,7 @@ class CercoPayslipLinesCotisationIpres(models.TransientModel):
         periode = self.date_from.strftime('%B %Y')
 
         return self.env.ref(
-            'arsata_payroll.action_report_css_declaration'
+            'paie_gainde.action_report_css_declaration'
         ).report_action(self, data={
             'date_from': self.date_from,
             'date_to': self.date_to,

@@ -21,12 +21,12 @@ class LineCercoConvention(models.Model):
 
     name = fields.Char(string='Libellé', required=True)
     code = fields.Char(string='Code Grille')
-    taux_h = fields.Float(string='Taux horaire',default=173.3)
-    wage = fields.Float(string='Salaire brut')
+    taux_h = fields.Float(string='Taux horaire',default=173.33)
+    wage = fields.Float(string='Salaire de base')
     conv_id = fields.Many2one(
         'cerco.convention',
-        string="Convention collective",
-        ondelete='cascade',
+        string="Convention Collective ",
+        ondelete='cascade',default='Commerce'
         
     )
 
