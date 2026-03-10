@@ -25,13 +25,14 @@ des conventions collectives, et les rapports liés aux cotisations sociales.
         # Vues
         
         'views/hr_contract_view.xml',
-        'views/report_cotisation_ipres.xml',
+        
         
         'views/hr_payroll_view.xml',
-        
+        'views/report_cotisation_ipres.xml',
         'views/convention_view.xml',
         'views/ipres_xlsx.xml',
         'views/xls_ipres.xml',
+        'menu/menu.xml',
 
         
 
