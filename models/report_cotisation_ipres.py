@@ -22,7 +22,7 @@ class IpresXlsxReport(models.AbstractModel):
         sheet = workbook.add_worksheet('IPRES')
 
         # ===============================
-        # 1. EN-T�TE EMPLOYEUR
+        # 1. EN-TETE EMPLOYEUR
         # ===============================
         company = self.env.company
         sheet.write('A2', 'NOM EMPLOYEUR :', title_fmt)
@@ -31,7 +31,6 @@ class IpresXlsxReport(models.AbstractModel):
         sheet.write('B2', 'ANNEE :', title_fmt)
         sheet.write('B3', wizard.date_to.year)
         
-
         mois_fr = {
             1: 'Janvier', 2: 'Fevrier', 3: 'Mars', 4: 'Avril',
             5: 'Mai', 6: 'Juin', 7: 'Juillet', 8: 'Aout',
@@ -41,7 +40,7 @@ class IpresXlsxReport(models.AbstractModel):
         sheet.write('C3', mois_fr[wizard.date_to.month])
 
         # ===============================
-        # 2. EN-T�TES TABLEAU IPRES
+        # 2. EN-TETES TABLEAU IPRES
         # ===============================
         headers = [
             'Num Assurance Sociale',
@@ -60,7 +59,7 @@ class IpresXlsxReport(models.AbstractModel):
             sheet.write(header_row, col, title, header_fmt)
 
         # ===============================
-        # 3. COLLECTE DES DONN�ES
+        # 3. COLLECTE DES DONNEES
         # ===============================
         payslips = self.env['hr.payslip'].search([
             ('state', '=', 'paid'),
@@ -91,7 +90,7 @@ class IpresXlsxReport(models.AbstractModel):
                 if line.code == 'GROSS':
                     employees_data[emp.id]['brut_ipres'] += line.total
 
-            # Temps de pr�sence
+            # Temps de presence
             total_hours = 0.0
 
             for wd in slip.worked_days_line_ids:
@@ -143,7 +142,7 @@ class ReportCotisationIPRES(models.AbstractModel):
     @api.model
     def _get_report_values(self, docids, data=None):
 
-        # ================= S�CURIT� =================
+        # ================= SECURITE =================
         data = data or {}
 
         date_from = data.get('date_from')
@@ -172,7 +171,7 @@ class ReportCotisationIPRES(models.AbstractModel):
                 "Verifiez que les bulletins sont valides ou payes."
             )
 
-        # ================= DONN�ES =================
+        # ================= DONNEES =================
         rows = []
         totals = defaultdict(float)
         index = 1
@@ -229,7 +228,7 @@ class ReportCotisationIPRES(models.AbstractModel):
 
             rows.append(row)
 
-            # --- Totaux cumul�s (toutes pages) ---
+            # --- Totaux cumules (toutes pages) ---
             totals['brut'] += row['brut']
 
             totals['rg_base'] += row['rg_base']
@@ -298,14 +297,14 @@ class ReportLivrePaie(models.AbstractModel):
             for line in slip.line_ids:
                 employees[emp][(line.code, line.name)] += line.amount
                 
-        company = self.env.company   # ? TR�S IMPORTANT
+        company = self.env.company
 
         return {
             "employees": employees,
             "date_from": wizard.date_from,
             "date_to": wizard.date_to,
             "year": wizard.date_to.year,
-            "company": company,        # ? inject� dans QWeb
+            "company": company,
         }
 
 
@@ -491,7 +490,32 @@ class ReportDeclarationCSS(models.AbstractModel):
         data = data or {}
         company = self.env.company
 
-        date_from = data.get('date_from')
+        # Les rapports peuvent etre appeles avec un payload data ou directement
+        # depuis le wizard. On initialise toujours les deux dates avant de les
+        # utiliser afin d'eviter tout UnboundLocalError.
+        wizard = self.env['cerco.payslip.lines.cotisation.ipres'].browse(docids)
+        wizard_date_from = wizard[:1].date_from if wizard else False
+        wizard_date_to = wizard[:1].date_to if wizard else False
+
+        date_from = data.get('date_from') or wizard_date_from
+        date_to = data.get('date_to') or wizard_date_to
+
+        if isinstance(date_from, str):
+            date_from = fields.Date.from_string(date_from)
+
+        if isinstance(date_to, str):
+            date_to = fields.Date.from_string(date_to)
+
+        if not date_from or not date_to:
+            raise UserError(
+                "Veuillez definir une periode valide (date de debut et date de fin) pour la declaration CSS."
+            )
+
+        if date_from > date_to:
+            raise UserError(
+                "La date de debut ne peut pas etre posterieure a la date de fin."
+            )
+
         periode = ''
         if isinstance(date_from, (date, datetime)):
             periode = format_date(
@@ -501,6 +525,9 @@ class ReportDeclarationCSS(models.AbstractModel):
             ).capitalize()
         
         date_decl = data.get('date_declaration') or date_from
+        if isinstance(date_decl, str):
+            date_decl = fields.Date.from_string(date_decl)
+
         date_declaration_str = ''
         if isinstance(date_decl, (date, datetime)):
             date_declaration_str = format_date(
@@ -508,8 +535,6 @@ class ReportDeclarationCSS(models.AbstractModel):
                 format='d MMMM yyyy',
                 locale='fr'
             ).capitalize()
-        
-        date_to = data.get('date_to')
 
         slips = self.env['hr.payslip'].search([
             ('date_from', '>=', date_from),
@@ -587,21 +612,29 @@ class ReportDeclarationCSS(models.AbstractModel):
         cot_total = cot_pf + cot_atmp
 
         # ================= DATE =================
-        date_decl = data.get('date_declaration')
         date_declaration_str = (
             date_decl.strftime('%d/%m/%Y')
             if isinstance(date_decl, (date, datetime)) else ''
         )
 
         return {
-            'company': self.env.company,
-            'periode': data.get('periode', ''),
+            'company': company,
+            'site': company.city or '',
+            'periode': periode,
+            'ninea': company.vat or '',
             'date_declaration_str': date_declaration_str,
+            'type_employeur': 'Mensuel',
+            'adresse_complete': ', '.join(filter(None, [
+                company.street,
+                company.street2,
+                company.city,
+                company.phone,
+            ])),
 
             'effectif_global': len(slips),
             'total_salaires': total_salaires,
 
-            # Effectifs / montants A � F
+            # Effectifs / montants A a F
             'eff_perm_ge_63': eff_perm_ge_63, 'sal_perm_ge_63': sal_perm_ge_63,
             'eff_perm_lt_63': eff_perm_lt_63, 'sal_perm_lt_63': sal_perm_lt_63,
             'eff_cdd_ge_63': eff_cdd_ge_63,   'sal_cdd_ge_63': sal_cdd_ge_63,
@@ -619,16 +652,4 @@ class ReportDeclarationCSS(models.AbstractModel):
             'cot_pf': cot_pf,
             'cot_atmp': cot_atmp,
             'cot_total': cot_total,
-            'company': company,
-            'site': company.city or '',
-            'periode': periode,
-            'ninea': company.vat or '',
-            'date_declaration_str': date_declaration_str,
-            'type_employeur': 'Mensuel',
-            'adresse_complete': ', '.join(filter(None, [
-                company.street,
-                company.street2,
-                company.city,
-                company.phone, ])),
         }
-
